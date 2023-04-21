@@ -212,6 +212,7 @@ public class DefaultOrderRegionServiceTest {
     public void getAllOrderRegionByProjectTest(TestContext ctx) {
         Async async = ctx.async();
         FilterModel filterModel = new FilterModel();
+        FilterItemModel filterItemModel = new FilterItemModel();
         filterModel.setStatus(Arrays.asList(OrderStatus.SENT, OrderStatus.RESUBMIT));
 
         String expectedQuery = "SELECT to_jsonb(campaign.*) campaign, campaign.name AS campaign_name, campaign.use_credit," +
@@ -257,7 +258,7 @@ public class DefaultOrderRegionServiceTest {
             return null;
         }).when(this.sql).prepared(Mockito.any(), Mockito.any(), Mockito.any(), Mockito.any());
 
-        this.defaultOrderRegionService.getAllOrderRegionByProject(Arrays.asList(18, 2846), filterModel);
+        this.defaultOrderRegionService.getAllOrderRegionByProject(Arrays.asList(18, 2846), filterModel, filterItemModel);
         async.awaitSuccess(10000);
     }
 

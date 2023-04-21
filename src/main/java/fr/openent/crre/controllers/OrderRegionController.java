@@ -669,7 +669,8 @@ public class OrderRegionController extends BaseController {
                         .map(Integer.class::cast)
                         .collect(Collectors.toList());
                 FilterModel filters = new FilterModel(orderRegions);
-                Future<JsonArray> ordersFuture = orderRegionService.getAllOrderRegionByProject(idsProjects, filters);
+                FilterItemModel filtersItem = new FilterItemModel(orderRegions);
+                Future<JsonArray> ordersFuture = orderRegionService.getAllOrderRegionByProject(idsProjects, filters, filtersItem);
                 ordersFuture
                         .compose(orderResults -> {
                             List<String> listIdsEquipment = orderResults.stream()
