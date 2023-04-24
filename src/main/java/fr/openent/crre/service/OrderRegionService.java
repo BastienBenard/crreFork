@@ -21,10 +21,12 @@ public interface OrderRegionService {
     /**
      * Get orders by projects filtered
      *
-     * @param idsProject {@link List<Integer>} List of project ids
-     * @param filters {@link FilterModel} Filters containing status
+     * @param idsProject          {@link List<Integer>} List of project ids
+     * @param filters             {@link FilterModel} Filters containing status
+     * @param itemSearchedIdsList
+     * @param itemFilteredIdsList
      */
-    Future<JsonArray> getAllOrderRegionByProject(List<Integer> idsProject, FilterModel filters, FilterItemModel filtersItem);
+    Future<JsonArray> getAllOrderRegionByProject(List<Integer> idsProject, FilterModel filters, FilterItemModel filtersItem, List<String> itemSearchedIdsList, List<String> itemFilteredIdsList);
 
 
     Future<List<OrderRegionEquipmentModel>> getOrdersRegionById(List<Integer> orderRegionEquipmentIdList);

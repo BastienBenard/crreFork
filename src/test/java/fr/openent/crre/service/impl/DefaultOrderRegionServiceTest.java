@@ -21,6 +21,7 @@ import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.powermock.modules.junit4.PowerMockRunner;
 import org.powermock.modules.junit4.PowerMockRunnerDelegate;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
@@ -258,7 +259,7 @@ public class DefaultOrderRegionServiceTest {
             return null;
         }).when(this.sql).prepared(Mockito.any(), Mockito.any(), Mockito.any(), Mockito.any());
 
-        this.defaultOrderRegionService.getAllOrderRegionByProject(Arrays.asList(18, 2846), filterModel, filterItemModel);
+        this.defaultOrderRegionService.getAllOrderRegionByProject(Arrays.asList(18, 2846), filterModel, filterItemModel, new ArrayList<>(), new ArrayList<>());
         async.awaitSuccess(10000);
     }
 

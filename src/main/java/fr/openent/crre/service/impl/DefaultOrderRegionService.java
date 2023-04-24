@@ -107,7 +107,7 @@ public class DefaultOrderRegionService extends SqlCrudService implements OrderRe
     }
 
     @Override
-    public Future<JsonArray> getAllOrderRegionByProject(List<Integer> idsProject, FilterModel filters, FilterItemModel filtersItem) {
+    public Future<JsonArray> getAllOrderRegionByProject(List<Integer> idsProject, FilterModel filters, FilterItemModel filtersItem, List<String> itemSearchedIdsList, List<String> itemFilteredIdsList) {
         Promise<JsonArray> promise = Promise.promise();
         JsonArray values = new JsonArray();
 
@@ -133,13 +133,27 @@ public class DefaultOrderRegionService extends SqlCrudService implements OrderRe
                 "LEFT JOIN " + Crre.crreSchema + ".basket_order AS bo ON (bo.id = o_c_e.id_basket) " +
                 "LEFT JOIN  " + Crre.crreSchema + ".campaign ON (o_r_e.id_campaign = campaign.id) " +
                 "LEFT JOIN " + Crre.crreSchema + ".students AS st ON (o_r_e.id_structure = st.id_structure) " +
+                "LEFT JOIN " + Crre.crreSchema + ".structure AS struct ON (o_r_e.id_structure = struct.id_structure) " +
                 "WHERE o_r_e.id_project IN " + Sql.listPrepared(idsProject) + " AND o_r_e.equipment_key IS NOT NULL ";
         values.addAll(new JsonArray(idsProject));
         // Condition de recherche de texte
         if (filters.getSearchingText() != null) {
-            select += "AND (lower(o_r_e.owner_name) ~* ? OR lower(o_r_e_o.owner_name) ~* ? OR lower(b.name) ~* ? OR o_r_e_o.equipment_name ~* ? )";
-            values.add(filters.getSearchingText()).add(filters.getSearchingText())
-                    .add(filters.getSearchingText()).add(filters.getSearchingText());
+            select += "AND (lower(o_r_e.owner_name) ~* ? OR lower(bo.name) ~* ? OR lower(struct.uai) ~* ? OR lower(struct.name) ~* ? " +
+                    "OR lower(struct.city) ~* ? OR lower(struct.region) ~* ? OR lower(struct.public) ~* ? OR lower(struct.catalog) ~* ? OR lower(p.title) ~* ?";
+            values.add(filters.getSearchingText()).add(filters.getSearchingText()).add(filters.getSearchingText()).add(filters.getSearchingText())
+                    .add(filters.getSearchingText()).add(filters.getSearchingText()).add(filters.getSearchingText()).add(filters.getSearchingText())
+                    .add(filters.getSearchingText());
+            if (!itemSearchedIdsList.isEmpty()) {
+                select += " OR o_r_e.equipment_key IN " + Sql.listPrepared(itemSearchedIdsList);
+                values.addAll(new JsonArray(itemSearchedIdsList));
+            }
+            select += ") ";
+        }
+
+        // Condition de filtrage d'équipements
+        if (filtersItem.hasFilters() && !itemFilteredIdsList.isEmpty()) {
+            select += "AND (o_r_e.equipment_key IN " + Sql.listPrepared(itemFilteredIdsList) + ")";
+            values.addAll(new JsonArray(itemFilteredIdsList));
         }
 
 
@@ -165,6 +179,7 @@ public class DefaultOrderRegionService extends SqlCrudService implements OrderRe
                     .collect(Collectors.toList()));
             values.addAll(statusArray);
         }
+
         String selectOld = "SELECT to_jsonb(campaign.*) campaign, campaign.name AS campaign_name, campaign.use_credit, p.title AS title, " +
                 "to_jsonb(o_c_e_o.*) AS order_parent, bo.name AS basket_name, bo.id AS basket_id, st.seconde, st.premiere, st.terminale, st.secondepro, st.premierepro, " +
                 "st.terminalepro, st.secondetechno, st.premieretechno, st.terminaletechno, st.cap1, st.cap2, st.cap3, st.bma1, st.bma2 , " +
@@ -180,6 +195,7 @@ public class DefaultOrderRegionService extends SqlCrudService implements OrderRe
                 "LEFT JOIN  " + Crre.crreSchema + ".campaign ON (o_r_e_o.id_campaign = campaign.id) " +
                 "LEFT JOIN " + Crre.crreSchema + ".students AS st ON (o_r_e_o.id_structure = st.id_structure) " +
                 "LEFT JOIN  " + Crre.crreSchema + ".status AS s ON s.id = o_r_e_o.id_status " +
+                "LEFT JOIN " + Crre.crreSchema + ".structure AS struct ON (o_r_e_o.id_structure = struct.id_structure) " +
                 "WHERE o_r_e_o.id_project IN " + Sql.listPrepared(idsProject) + " ";
 
         values.addAll(new JsonArray(idsProject));
@@ -197,6 +213,15 @@ public class DefaultOrderRegionService extends SqlCrudService implements OrderRe
                 selectOld += " AND (o_r_e_o.equipment_diffusor IN " + Sql.listPrepared(filtersItem.getDistributors()) + ")";
                 values.addAll(new JsonArray(filtersItem.getDistributors()));
             }
+        }
+
+        // Condition de recherche de texte
+        if (filters.getSearchingText() != null) {
+            selectOld += "AND (lower(o_r_e_o.owner_name) ~* ? OR lower(bo.name) ~* ? OR lower(struct.uai) ~* ? OR lower(struct.name) ~* ? " +
+                    "OR lower(struct.city) ~* ? OR lower(struct.region) ~* ? OR lower(struct.public) ~* ? OR lower(struct.catalog) ~* ? OR lower(p.title) ~* ? OR o_r_e_o.equipment_name ~* ?)";
+            values.add(filters.getSearchingText()).add(filters.getSearchingText()).add(filters.getSearchingText()).add(filters.getSearchingText())
+                    .add(filters.getSearchingText()).add(filters.getSearchingText()).add(filters.getSearchingText()).add(filters.getSearchingText())
+                    .add(filters.getSearchingText()).add(filters.getSearchingText());
         }
 
         // Condition de filtrage de structures
@@ -387,16 +412,21 @@ public class DefaultOrderRegionService extends SqlCrudService implements OrderRe
                 sqlquery += "AND (? ";
                 values.add(false);
             }
-            if (!filtersItem.getEditors().isEmpty() && !filtersItem.getDistributors().isEmpty()) {
+            if (!filtersItem.getEditors().isEmpty() && !filtersItem.getDistributors().isEmpty() && !filtersItem.getCatalogs().isEmpty()) {
                 sqlquery += " AND ((o_r_e_o.equipment_editor IN " + Sql.listPrepared(filtersItem.getEditors()) + " " +
+                        "AND o_r_e_o.equipment_format IN " + Sql.listPrepared(filtersItem.getCatalogs()) + " " +
                         "AND o_r_e_o.equipment_diffusor IN " + Sql.listPrepared(filtersItem.getDistributors()) + ") " +
                         "OR o_r_e.id IS NOT NULL) ";
-                values.addAll(new JsonArray(filtersItem.getEditors())).addAll(new JsonArray(filtersItem.getDistributors()));
+                values.addAll(new JsonArray(filtersItem.getEditors())).addAll(new JsonArray(filtersItem.getCatalogs())).addAll(new JsonArray(filtersItem.getDistributors()));
             } else if (!filtersItem.getEditors().isEmpty() && filtersItem.getDistributors().isEmpty()) {
                 sqlquery += " AND (o_r_e_o.equipment_editor IN " + Sql.listPrepared(filtersItem.getEditors()) +
                         " OR o_r_e.id IS NOT NULL) ";
                 values.addAll(new JsonArray(filtersItem.getEditors()));
             } else if (filtersItem.getEditors().isEmpty() && !filtersItem.getDistributors().isEmpty()) {
+                sqlquery += " AND (o_r_e_o.equipment_diffusor IN " + Sql.listPrepared(filtersItem.getDistributors()) +
+                        " OR o_r_e.id IS NOT NULL) ";
+                values.addAll(new JsonArray(filtersItem.getDistributors()));
+            } else if (filtersItem.getCatalogs().isEmpty() && !filtersItem.getDistributors().isEmpty()) {
                 sqlquery += " AND (o_r_e_o.equipment_diffusor IN " + Sql.listPrepared(filtersItem.getDistributors()) +
                         " OR o_r_e.id IS NOT NULL) ";
                 values.addAll(new JsonArray(filtersItem.getDistributors()));
