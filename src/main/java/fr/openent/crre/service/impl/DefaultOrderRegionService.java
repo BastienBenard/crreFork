@@ -396,8 +396,7 @@ public class DefaultOrderRegionService extends SqlCrudService implements OrderRe
                     .add(filters.getSearchingText());
             if (!itemSearchedIdsList.isEmpty()) {
                 sqlquery += " OR o_r_e.equipment_key IN " + Sql.listPrepared(itemSearchedIdsList);
-                sqlquery += " OR o_r_e_o.equipment_key IN " + Sql.listPrepared(itemSearchedIdsList);
-                values.addAll(new JsonArray(itemSearchedIdsList)).addAll(new JsonArray(itemSearchedIdsList));
+                values.addAll(new JsonArray(itemSearchedIdsList));
             }
             sqlquery += ") ";
         }
